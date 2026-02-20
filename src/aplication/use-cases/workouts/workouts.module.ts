@@ -8,10 +8,19 @@ import { CompleteWorkoutUseCase } from './complete-workout.use-case';
 import { RevertWorkoutToDraftUseCase } from './revert-workout-to-draft.use-case';
 import { RemoveWorkoutExerciseUseCase } from './remove-workout-exercise.use-case';
 import { WORKOUT_REPOSITORY } from './workout-repository.token';
-import { InfrastructureModule } from '../../../infrastructure/infrastructure.module';
+import { PrismaWorkoutRepository } from '../../../infrastructure/repositories/prisma-workout.repository';
+import { PrismaModule } from '../../../infrastructure/db/prisma.module';
+import { WorkoutsController } from '../../../presentation/http/controllers/workouts.controller';
 
+/**
+ * WorkoutsModule - Feature module de sesiones de musculación
+ *
+ * - providers: use cases + binding WORKOUT_REPOSITORY → PrismaWorkoutRepository
+ * - controllers: WorkoutsController
+ * - exports WORKOUT_REPOSITORY (usado por RoutinesModule, CalendarModule)
+ */
 @Module({
-  imports: [InfrastructureModule],
+  imports: [PrismaModule],
   providers: [
     GetWorkoutByDateUseCase,
     UpsertWorkoutSessionUseCase,
@@ -21,7 +30,9 @@ import { InfrastructureModule } from '../../../infrastructure/infrastructure.mod
     CompleteWorkoutUseCase,
     RevertWorkoutToDraftUseCase,
     RemoveWorkoutExerciseUseCase,
+    { provide: WORKOUT_REPOSITORY, useClass: PrismaWorkoutRepository },
   ],
+  controllers: [WorkoutsController],
   exports: [
     GetWorkoutByDateUseCase,
     UpsertWorkoutSessionUseCase,

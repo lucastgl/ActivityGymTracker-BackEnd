@@ -7,7 +7,15 @@ import { WorkoutsModule } from '../workouts/workouts.module';
 import { RunsModule } from '../runs/runs.module';
 import { WORKOUT_REPOSITORY } from '../workouts/workout-repository.token';
 import { RUN_REPOSITORY } from '../runs/run-repository.token';
+import { CalendarController } from '../../../presentation/http/controllers/calendar.controller';
 
+/**
+ * CalendarModule - Feature module de calendario
+ *
+ * - providers: use cases + CalendarQueryRepositoryImpl (agrega Workout + Run repos)
+ * - imports: WorkoutsModule, RunsModule (para WORKOUT_REPOSITORY, RUN_REPOSITORY)
+ * - controllers: CalendarController
+ */
 @Module({
   imports: [WorkoutsModule, RunsModule],
   providers: [
@@ -24,6 +32,7 @@ import { RUN_REPOSITORY } from '../runs/run-repository.token';
       inject: [WORKOUT_REPOSITORY, RUN_REPOSITORY],
     },
   ],
+  controllers: [CalendarController],
   exports: [GetCalendarMonthUseCase, GetDaySummaryUseCase],
 })
 export class CalendarModule {}

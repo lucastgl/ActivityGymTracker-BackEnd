@@ -8,10 +8,21 @@ import { UpdateRoutineUseCase } from './update-routine.use-case';
 import { UpdateRoutineDayUseCase } from './update-routine-day.use-case';
 import { GetRoutineDetailUseCase } from './get-routine-detail.use-case';
 import { ActivateRoutineForDateUseCase } from './activate-routine-for-date.use-case';
-import { InfrastructureModule } from '../../../infrastructure/infrastructure.module';
+import { ROUTINE_REPOSITORY } from './routine-repository.token';
+import { PrismaRoutineRepository } from '../../../infrastructure/repositories/prisma-routine.repository';
+import { PrismaModule } from '../../../infrastructure/db/prisma.module';
+import { WorkoutsModule } from '../workouts/workouts.module';
+import { RoutinesController } from '../../../presentation/http/controllers/routines.controller';
 
+/**
+ * RoutinesModule - Feature module de rutinas
+ *
+ * - providers: use cases + binding ROUTINE_REPOSITORY → PrismaRoutineRepository
+ * - imports WorkoutsModule (para WORKOUT_REPOSITORY en ActivateRoutineForDateUseCase)
+ * - controllers: RoutinesController
+ */
 @Module({
-  imports: [InfrastructureModule],
+  imports: [PrismaModule, WorkoutsModule],
   providers: [
     ListRoutinesUseCase,
     CreateRoutineUseCase,
@@ -22,7 +33,9 @@ import { InfrastructureModule } from '../../../infrastructure/infrastructure.mod
     UpdateRoutineDayUseCase,
     GetRoutineDetailUseCase,
     ActivateRoutineForDateUseCase,
+    { provide: ROUTINE_REPOSITORY, useClass: PrismaRoutineRepository },
   ],
+  controllers: [RoutinesController],
   exports: [
     ListRoutinesUseCase,
     CreateRoutineUseCase,

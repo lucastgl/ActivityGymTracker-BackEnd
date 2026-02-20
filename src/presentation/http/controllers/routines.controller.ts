@@ -1,30 +1,3 @@
-/**
- * INSTRUCTIVO - RoutinesController
- *
- * FUNCIÓN:
- *   Capa HTTP para el recurso "rutinas" (plantillas de entrenamiento).
- *   Las rutinas son plantillas con días y ejercicios planeados; la "activación"
- *   crea una sesión de workout para una fecha concreta.
- *
- * FLUJO:
- *   1. Validación DTO (ValidationPipe)
- *   2. userId desde X-User-Id
- *   3. Mapeo DTO → dominio (Id, DateOnly, etc.)
- *   4. useCase.execute(...)
- *   5. Entidad → RoutineResponseDto → JSON
- *
- * RUTAS:
- *   GET    /routines                    - Lista rutinas
- *   POST   /routines                    - Crear rutina
- *   GET    /routines/:id                 - Detalle (con days + exercises)
- *   PATCH  /routines/:id                - Actualizar rutina
- *   POST   /routines/:id/days            - Agregar día
- *   PATCH  /routines/:id/days/:dayId     - Actualizar día
- *   POST   /routines/:id/days/:dayId/exercises     - Agregar ejercicio al día
- *   PATCH  /routines/:id/days/:dayId/exercises/:exId - Actualizar ejercicio planeado
- *   POST   /routines/:id/activate        - Activar rutina para fecha (crea workout)
- */
-
 import {
   Controller,
   Get,
@@ -36,6 +9,13 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiHeader,
+  ApiParam,
+} from '@nestjs/swagger';
 import { Id } from '../../../domain/value-objects/id.vo';
 import { DateOnly } from '../../../domain/value-objects/date-only.vo';
 import { ListRoutinesUseCase } from '../../../aplication/use-cases/routines/list-routines.use-case';
@@ -63,6 +43,8 @@ import type { RoutineDetail } from '../../../domain/repositories/routine.reposit
 
 const DEFAULT_USER_ID = '00000000-0000-4000-8000-000000000000';
 
+@ApiTags('Routines')
+@ApiHeader({ name: 'x-user-id', description: 'ID del usuario', required: false })
 @Controller('routines')
 export class RoutinesController {
   constructor(
@@ -82,15 +64,17 @@ export class RoutinesController {
   }
 
   @Get()
-  async list(
-    @Headers('x-user-id') userIdHeader: string,
-  ): Promise<RoutineResponseDto[]> {
+  @ApiOperation({ summary: 'Listar rutinas del usuario' })
+  @ApiResponse({ status: 200, type: [RoutineResponseDto] })
+  async list(@Headers('x-user-id') userIdHeader: string): Promise<RoutineResponseDto[]> {
     const routines = await this.listRoutines.execute(this.userId(userIdHeader));
     return routines.map((r) => this.routineToDto(r));
   }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Crear rutina' })
+  @ApiResponse({ status: 201, type: RoutineResponseDto })
   async create(
     @Headers('x-user-id') userIdHeader: string,
     @Body() dto: CreateRoutineDto,
@@ -100,6 +84,10 @@ export class RoutinesController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Obtener detalle de rutina (con days + exercises)' })
+  @ApiParam({ name: 'id', description: 'UUID de la rutina' })
+  @ApiResponse({ status: 200, type: RoutineResponseDto })
+  @ApiResponse({ status: 404, description: 'Rutina no encontrada' })
   async getDetail(
     @Headers('x-user-id') userIdHeader: string,
     @Param('id') id: string,
@@ -112,6 +100,9 @@ export class RoutinesController {
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Actualizar rutina' })
+  @ApiParam({ name: 'id', description: 'UUID de la rutina' })
+  @ApiResponse({ status: 200, type: RoutineResponseDto })
   async update(
     @Headers('x-user-id') userIdHeader: string,
     @Param('id') id: string,
@@ -127,6 +118,9 @@ export class RoutinesController {
 
   @Post(':id/days')
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Agregar día a la rutina' })
+  @ApiParam({ name: 'id', description: 'UUID de la rutina' })
+  @ApiResponse({ status: 201, type: RoutineDayResponseDto })
   async addDay(
     @Headers('x-user-id') userIdHeader: string,
     @Param('id') routineId: string,
@@ -141,6 +135,10 @@ export class RoutinesController {
   }
 
   @Patch(':id/days/:dayId')
+  @ApiOperation({ summary: 'Actualizar día de la rutina' })
+  @ApiParam({ name: 'id', description: 'UUID de la rutina' })
+  @ApiParam({ name: 'dayId', description: 'UUID del día' })
+  @ApiResponse({ status: 200, type: RoutineDayResponseDto })
   async updateDay(
     @Headers('x-user-id') userIdHeader: string,
     @Param('id') routineId: string,
@@ -158,6 +156,10 @@ export class RoutinesController {
 
   @Post(':id/days/:dayId/exercises')
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Agregar ejercicio a un día de rutina' })
+  @ApiParam({ name: 'id', description: 'UUID de la rutina' })
+  @ApiParam({ name: 'dayId', description: 'UUID del día' })
+  @ApiResponse({ status: 201, type: RoutineDayExerciseResponseDto })
   async addDayExercise(
     @Headers('x-user-id') userIdHeader: string,
     @Param('id') routineId: string,
@@ -174,6 +176,11 @@ export class RoutinesController {
   }
 
   @Patch(':id/days/:dayId/exercises/:exerciseId')
+  @ApiOperation({ summary: 'Actualizar ejercicio planeado en un día de rutina' })
+  @ApiParam({ name: 'id', description: 'UUID de la rutina' })
+  @ApiParam({ name: 'dayId', description: 'UUID del día' })
+  @ApiParam({ name: 'exerciseId', description: 'UUID del ejercicio planeado' })
+  @ApiResponse({ status: 200, type: RoutineDayExerciseResponseDto })
   async updateDayExercise(
     @Headers('x-user-id') userIdHeader: string,
     @Param('id') routineId: string,
@@ -193,6 +200,11 @@ export class RoutinesController {
 
   @Post(':id/activate')
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Activar rutina para una fecha (crea sesión de workout)' })
+  @ApiParam({ name: 'id', description: 'UUID de la rutina' })
+  @ApiResponse({ status: 201, description: 'Sesión de workout creada' })
+  @ApiResponse({ status: 404, description: 'Rutina no encontrada' })
+  @ApiResponse({ status: 409, description: 'Ya existe una sesión para esa fecha' })
   async activate(
     @Headers('x-user-id') userIdHeader: string,
     @Param('id') id: string,

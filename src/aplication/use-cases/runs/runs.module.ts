@@ -6,11 +6,21 @@ import { UpdateSplitsUseCase } from './update-splits.use-case';
 import { CompleteRunUseCase } from './complete-run.use-case';
 import { RevertRunToDraftUseCase } from './revert-run-to-draft.use-case';
 import { RUN_REPOSITORY } from './run-repository.token';
+import { PrismaRunRepository } from '../../../infrastructure/repositories/prisma-run.repository';
+import { PrismaModule } from '../../../infrastructure/db/prisma.module';
 import { RunningModule } from '../../../running/running.module';
-import { InfrastructureModule } from '../../../infrastructure/infrastructure.module';
+import { RunsController } from '../../../presentation/http/controllers/runs.controller';
 
+/**
+ * RunsModule - Feature module de sesiones de running
+ *
+ * - providers: use cases + binding RUN_REPOSITORY → PrismaRunRepository
+ * - imports: RunningModule (para generación de splits)
+ * - controllers: RunsController
+ * - exports RUN_REPOSITORY (usado por CalendarModule)
+ */
 @Module({
-  imports: [RunningModule, InfrastructureModule],
+  imports: [PrismaModule, RunningModule],
   providers: [
     GetRunByDateUseCase,
     UpsertRunSessionUseCase,
@@ -18,7 +28,9 @@ import { InfrastructureModule } from '../../../infrastructure/infrastructure.mod
     UpdateSplitsUseCase,
     CompleteRunUseCase,
     RevertRunToDraftUseCase,
+    { provide: RUN_REPOSITORY, useClass: PrismaRunRepository },
   ],
+  controllers: [RunsController],
   exports: [
     GetRunByDateUseCase,
     UpsertRunSessionUseCase,

@@ -28,6 +28,12 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiHeader,
+} from '@nestjs/swagger';
 import { Id } from '../../../domain/value-objects/id.vo';
 import { DateOnly } from '../../../domain/value-objects/date-only.vo';
 import { CreateMeasurementUseCase } from '../../../aplication/use-cases/measurements/create-measurement.use-case';
@@ -41,6 +47,8 @@ import {
 
 const DEFAULT_USER_ID = '00000000-0000-4000-8000-000000000000';
 
+@ApiTags('Measurements')
+@ApiHeader({ name: 'x-user-id', description: 'ID del usuario', required: false })
 @Controller('measurements')
 export class MeasurementsController {
   constructor(
@@ -54,6 +62,8 @@ export class MeasurementsController {
   }
 
   @Get('latest')
+  @ApiOperation({ summary: 'Obtener última medición corporal' })
+  @ApiResponse({ status: 200, type: MeasurementResponseDto })
   async getLatest(
     @Headers('x-user-id') userIdHeader: string,
   ): Promise<MeasurementResponseDto | null> {
@@ -65,6 +75,8 @@ export class MeasurementsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Registrar medición corporal' })
+  @ApiResponse({ status: 201, type: MeasurementResponseDto })
   async create(
     @Headers('x-user-id') userIdHeader: string,
     @Body() dto: CreateMeasurementDto,
@@ -78,6 +90,8 @@ export class MeasurementsController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'Listar mediciones por rango de fechas' })
+  @ApiResponse({ status: 200, type: [MeasurementResponseDto] })
   async list(
     @Headers('x-user-id') userIdHeader: string,
     @Query() query: ListMeasurementsQueryDto,

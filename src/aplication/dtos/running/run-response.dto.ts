@@ -1,22 +1,23 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { SessionStatus } from '../../../domain/enums/session-status.enum';
 
 export class RunSplitResponseDto {
-  id!: string;
-  order!: number;
-  distanceKm!: number;
-  durationSec!: number;
+  @ApiProperty() id!: string;
+  @ApiProperty() order!: number;
+  @ApiProperty() distanceKm!: number;
+  @ApiProperty() durationSec!: number;
 }
 
 export class RunSessionResponseDto {
-  id!: string;
-  userId!: string;
-  date!: string;
-  status!: SessionStatus;
-  injuryMode!: boolean;
-  note?: string;
-  distanceKm!: number;
-  durationSec!: number;
-  createdAt!: string;
-  updatedAt!: string;
-  splits!: RunSplitResponseDto[];
+  @ApiProperty() id!: string;
+  @ApiProperty() userId!: string;
+  @ApiProperty({ example: '2024-01-15' }) date!: string;
+  @ApiProperty({ enum: SessionStatus }) status!: SessionStatus;
+  @ApiProperty() injuryMode!: boolean;
+  @ApiPropertyOptional() note?: string;
+  @ApiProperty() distanceKm!: number;
+  @ApiProperty() durationSec!: number;
+  @ApiProperty() createdAt!: string;
+  @ApiProperty() updatedAt!: string;
+  @ApiProperty({ type: [RunSplitResponseDto] }) splits!: RunSplitResponseDto[];
 }

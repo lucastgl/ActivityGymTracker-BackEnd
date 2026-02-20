@@ -34,6 +34,13 @@ import {
   HttpStatus,
   NotFoundException,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiHeader,
+  ApiParam,
+} from '@nestjs/swagger';
 import { Id } from '../../../domain/value-objects/id.vo';
 import { DateOnly } from '../../../domain/value-objects/date-only.vo';
 import { GetRunByDateUseCase } from '../../../aplication/use-cases/runs/get-run-by-date.use-case';
@@ -52,6 +59,8 @@ import type { RunSessionDetail } from '../../../domain/repositories/run.reposito
 
 const DEFAULT_USER_ID = '00000000-0000-4000-8000-000000000000';
 
+@ApiTags('Runs')
+@ApiHeader({ name: 'x-user-id', description: 'ID del usuario', required: false })
 @Controller('runs')
 export class RunsController {
   constructor(
@@ -69,6 +78,8 @@ export class RunsController {
 
   @Post('splits/generate')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Generar splits sugeridos (cálculo puro, sin persistir)' })
+  @ApiResponse({ status: 200, description: 'Lista de splits calculados' })
   generateSplitsPreview(@Body() dto: GenerateSplitsDto) {
     return this.generateSplitsFromDistance.execute(
       dto.totalDistanceKm,
@@ -77,6 +88,9 @@ export class RunsController {
   }
 
   @Get(':date')
+  @ApiOperation({ summary: 'Obtener sesión de run por fecha' })
+  @ApiParam({ name: 'date', example: '2024-01-15', description: 'Fecha YYYY-MM-DD' })
+  @ApiResponse({ status: 200, type: RunSessionResponseDto })
   async getByDate(
     @Headers('x-user-id') userIdHeader: string,
     @Param('date') date: string,
@@ -89,6 +103,9 @@ export class RunsController {
   }
 
   @Put(':date')
+  @ApiOperation({ summary: 'Crear o actualizar sesión de run por fecha' })
+  @ApiParam({ name: 'date', example: '2024-01-15', description: 'Fecha YYYY-MM-DD' })
+  @ApiResponse({ status: 200, type: RunSessionResponseDto })
   async upsertSession(
     @Headers('x-user-id') userIdHeader: string,
     @Param('date') date: string,
@@ -103,6 +120,10 @@ export class RunsController {
   }
 
   @Put(':date/splits')
+  @ApiOperation({ summary: 'Reemplazar splits de la sesión de run' })
+  @ApiParam({ name: 'date', example: '2024-01-15', description: 'Fecha YYYY-MM-DD' })
+  @ApiResponse({ status: 200, description: 'Splits actualizados' })
+  @ApiResponse({ status: 404, description: 'Sesión no encontrada' })
   async replaceSplits(
     @Headers('x-user-id') userIdHeader: string,
     @Param('date') date: string,
@@ -120,6 +141,10 @@ export class RunsController {
 
   @Post(':date/complete')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Marcar sesión de run como completada' })
+  @ApiParam({ name: 'date', example: '2024-01-15', description: 'Fecha YYYY-MM-DD' })
+  @ApiResponse({ status: 200, type: RunSessionResponseDto })
+  @ApiResponse({ status: 404, description: 'Sesión no encontrada' })
   async complete(
     @Headers('x-user-id') userIdHeader: string,
     @Param('date') date: string,
@@ -136,6 +161,10 @@ export class RunsController {
 
   @Post(':date/revert')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Revertir sesión de run a borrador' })
+  @ApiParam({ name: 'date', example: '2024-01-15', description: 'Fecha YYYY-MM-DD' })
+  @ApiResponse({ status: 200, type: RunSessionResponseDto })
+  @ApiResponse({ status: 404, description: 'Sesión no encontrada' })
   async revert(
     @Headers('x-user-id') userIdHeader: string,
     @Param('date') date: string,

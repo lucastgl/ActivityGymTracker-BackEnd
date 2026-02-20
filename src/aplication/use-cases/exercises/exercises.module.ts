@@ -4,23 +4,28 @@ import { ListExercisesUseCase } from './list-exercises.use-case';
 import { UpdateExerciseUseCase } from './update-exercise.use-case';
 import { DeactivateExerciseUseCase } from './deactivate-exercise.use-case';
 import { RestoreExerciseUseCase } from './restore-exercise.use-case';
-import { InfrastructureModule } from '../../../infrastructure/infrastructure.module';
+import { EXERCISE_REPOSITORY } from './exercise-repository.token';
+import { PrismaExerciseRepository } from '../../../infrastructure/repositories/prisma-exercise.repository';
+import { PrismaModule } from '../../../infrastructure/db/prisma.module';
+import { ExercisesController } from '../../../presentation/http/controllers/exercises.controller';
 
 /**
- * ExercisesModule
+ * ExercisesModule - Feature module de ejercicios
  *
- * Usa InfrastructureModule para EXERCISE_REPOSITORY (Prisma).
- * Para desarrollo sin BD: importar StubsModule en lugar de InfrastructureModule.
+ * - providers: use cases + binding token → PrismaExerciseRepository
+ * - controllers: ExercisesController
  */
 @Module({
-  imports: [InfrastructureModule],
+  imports: [PrismaModule],
   providers: [
     CreateExerciseUseCase,
     ListExercisesUseCase,
     UpdateExerciseUseCase,
     DeactivateExerciseUseCase,
     RestoreExerciseUseCase,
+    { provide: EXERCISE_REPOSITORY, useClass: PrismaExerciseRepository },
   ],
+  controllers: [ExercisesController],
   exports: [
     CreateExerciseUseCase,
     ListExercisesUseCase,

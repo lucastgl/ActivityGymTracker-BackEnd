@@ -1,30 +1,33 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { SetType } from '../../../domain/enums/set-type.enum';
 
 export class RoutineDayExerciseResponseDto {
-  id!: string;
-  routineDayId!: string;
-  exerciseId!: string;
-  plannedSets!: number;
-  plannedSetsType!: SetType;
-  order!: number;
-  plannedDrops?: number;
+  @ApiProperty() id!: string;
+  @ApiProperty() routineDayId!: string;
+  @ApiProperty() exerciseId!: string;
+  @ApiProperty() plannedSets!: number;
+  @ApiProperty({ enum: SetType }) plannedSetsType!: SetType;
+  @ApiProperty() order!: number;
+  @ApiPropertyOptional() plannedDrops?: number;
 }
 
 export class RoutineDayResponseDto {
-  id!: string;
-  routineId!: string;
-  dayKey!: string;
-  order!: number;
+  @ApiProperty() id!: string;
+  @ApiProperty() routineId!: string;
+  @ApiProperty() dayKey!: string;
+  @ApiProperty() order!: number;
+  @ApiProperty({ type: [RoutineDayExerciseResponseDto] })
   exercises!: RoutineDayExerciseResponseDto[];
 }
 
 export class RoutineResponseDto {
-  id!: string;
-  userId!: string;
-  name!: string;
-  isActive!: boolean;
-  notes?: string;
-  createdAt!: string;
-  updatedAt!: string;
+  @ApiProperty() id!: string;
+  @ApiProperty() userId!: string;
+  @ApiProperty() name!: string;
+  @ApiProperty() isActive!: boolean;
+  @ApiPropertyOptional() notes?: string;
+  @ApiProperty() createdAt!: string;
+  @ApiProperty() updatedAt!: string;
+  @ApiPropertyOptional({ type: [RoutineDayResponseDto] })
   days?: RoutineDayResponseDto[];
 }

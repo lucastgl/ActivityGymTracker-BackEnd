@@ -191,7 +191,8 @@ export const RoutineDayExerciseMapper = {
     if (patch.plannedSetsType !== undefined)
       data.plannedSetsType = patch.plannedSetsType;
     if (patch.order !== undefined) data.order = patch.order;
-    if (patch.plannedDrops !== undefined) data.plannedDrops = patch.plannedDrops;
+    if (patch.plannedDrops !== undefined)
+      data.plannedDrops = patch.plannedDrops;
     return data;
   },
 };

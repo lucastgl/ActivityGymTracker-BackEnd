@@ -38,6 +38,13 @@ import {
   HttpStatus,
   NotFoundException,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiHeader,
+  ApiParam,
+} from '@nestjs/swagger';
 import { Id } from '../../../domain/value-objects/id.vo';
 import { DateOnly } from '../../../domain/value-objects/date-only.vo';
 import { GetWorkoutByDateUseCase } from '../../../aplication/use-cases/workouts/get-workout-by-date.use-case';
@@ -59,6 +66,8 @@ import type { WorkoutSessionDetail } from '../../../domain/repositories/workout.
 
 const DEFAULT_USER_ID = '00000000-0000-4000-8000-000000000000';
 
+@ApiTags('Workouts')
+@ApiHeader({ name: 'x-user-id', description: 'ID del usuario', required: false })
 @Controller('workouts')
 export class WorkoutsController {
   constructor(
@@ -77,6 +86,9 @@ export class WorkoutsController {
   }
 
   @Get(':date')
+  @ApiOperation({ summary: 'Obtener sesión de workout por fecha' })
+  @ApiParam({ name: 'date', example: '2024-01-15', description: 'Fecha YYYY-MM-DD' })
+  @ApiResponse({ status: 200, type: WorkoutSessionResponseDto })
   async getByDate(
     @Headers('x-user-id') userIdHeader: string,
     @Param('date') date: string,
@@ -89,6 +101,9 @@ export class WorkoutsController {
   }
 
   @Put(':date')
+  @ApiOperation({ summary: 'Crear o actualizar metadata de sesión de workout' })
+  @ApiParam({ name: 'date', example: '2024-01-15', description: 'Fecha YYYY-MM-DD' })
+  @ApiResponse({ status: 200, type: WorkoutSessionResponseDto })
   async upsertSession(
     @Headers('x-user-id') userIdHeader: string,
     @Param('date') date: string,
@@ -104,6 +119,10 @@ export class WorkoutsController {
 
   @Post(':date/exercises')
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Agregar ejercicio a la sesión' })
+  @ApiParam({ name: 'date', example: '2024-01-15', description: 'Fecha YYYY-MM-DD' })
+  @ApiResponse({ status: 201, description: '{ id: uuid }' })
+  @ApiResponse({ status: 404, description: 'Sesión no encontrada' })
   async addExercise(
     @Headers('x-user-id') userIdHeader: string,
     @Param('date') date: string,
@@ -127,6 +146,10 @@ export class WorkoutsController {
 
   @Delete(':date/exercises/:exerciseId')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Quitar ejercicio de la sesión' })
+  @ApiParam({ name: 'date', example: '2024-01-15', description: 'Fecha YYYY-MM-DD' })
+  @ApiParam({ name: 'exerciseId', description: 'UUID del workout exercise' })
+  @ApiResponse({ status: 200, description: '{ success: boolean }' })
   async removeExercise(
     @Headers('x-user-id') userIdHeader: string,
     @Param('date') date: string,
@@ -140,6 +163,10 @@ export class WorkoutsController {
   }
 
   @Put(':date/exercises/:exerciseId/sets')
+  @ApiOperation({ summary: 'Crear o actualizar un set en el ejercicio' })
+  @ApiParam({ name: 'date', example: '2024-01-15', description: 'Fecha YYYY-MM-DD' })
+  @ApiParam({ name: 'exerciseId', description: 'UUID del workout exercise' })
+  @ApiResponse({ status: 200, description: '{ id: uuid }' })
   async upsertSet(
     @Headers('x-user-id') userIdHeader: string,
     @Param('date') date: string,
@@ -158,6 +185,10 @@ export class WorkoutsController {
   }
 
   @Put(':date/exercises/:exerciseId/sets/:setId/drops')
+  @ApiOperation({ summary: 'Reemplazar drops de un set (dropset)' })
+  @ApiParam({ name: 'date', example: '2024-01-15', description: 'Fecha YYYY-MM-DD' })
+  @ApiParam({ name: 'setId', description: 'UUID del workout set' })
+  @ApiResponse({ status: 200, description: 'Lista de drops actualizados' })
   async replaceDrops(
     @Headers('x-user-id') userIdHeader: string,
     @Param('date') date: string,
@@ -175,6 +206,10 @@ export class WorkoutsController {
 
   @Post(':date/complete')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Marcar sesión de workout como completada' })
+  @ApiParam({ name: 'date', example: '2024-01-15', description: 'Fecha YYYY-MM-DD' })
+  @ApiResponse({ status: 200, type: WorkoutSessionResponseDto })
+  @ApiResponse({ status: 404, description: 'Sesión no encontrada' })
   async complete(
     @Headers('x-user-id') userIdHeader: string,
     @Param('date') date: string,
@@ -191,6 +226,10 @@ export class WorkoutsController {
 
   @Post(':date/revert')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Revertir sesión de workout a borrador' })
+  @ApiParam({ name: 'date', example: '2024-01-15', description: 'Fecha YYYY-MM-DD' })
+  @ApiResponse({ status: 200, type: WorkoutSessionResponseDto })
+  @ApiResponse({ status: 404, description: 'Sesión no encontrada' })
   async revert(
     @Headers('x-user-id') userIdHeader: string,
     @Param('date') date: string,

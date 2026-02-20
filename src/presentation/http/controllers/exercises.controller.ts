@@ -1,26 +1,3 @@
-/**
- * INSTRUCTIVO - ExercisesController
- *
- * FUNCIÓN:
- *   Capa HTTP para el recurso "ejercicios". Recibe requests, valida DTOs,
- *   delega al use case y devuelve la respuesta serializada.
- *
- * FLUJO DE CADA ENDPOINT:
- *   1. Validación: NestJS ValidationPipe valida el DTO automáticamente
- *      (body, query, params) según decoradores class-validator.
- *   2. userId: Se obtiene del header X-User-Id (en producción: JWT/session).
- *   3. Mapeo: DTO → tipos de dominio (Id, DateOnly, CreateExerciseInput, etc.)
- *   4. Ejecución: useCase.execute(userId, ...)
- *   5. Respuesta: entidad → ExerciseResponseDto → JSON
- *
- * RUTAS:
- *   GET    /exercises           - Lista con filtros (category, equipment, sideType, isActive)
- *   POST   /exercises           - Crear ejercicio
- *   PATCH  /exercises/:id       - Actualizar ejercicio
- *   POST   /exercises/:id/deactivate - Soft-delete
- *   POST   /exercises/:id/restore    - Restaurar
- */
-
 import {
   Controller,
   Get,
@@ -33,6 +10,13 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiHeader,
+  ApiParam,
+} from '@nestjs/swagger';
 import { Id } from '../../../domain/value-objects/id.vo';
 import { CreateExerciseUseCase } from '../../../aplication/use-cases/exercises/create-exercise.use-case';
 import { ListExercisesUseCase } from '../../../aplication/use-cases/exercises/list-exercises.use-case';
@@ -46,6 +30,10 @@ import {
   ExerciseResponseDto,
 } from '../../../aplication/dtos/exercises';
 
+const DEFAULT_USER_ID = '00000000-0000-4000-8000-000000000000';
+
+@ApiTags('Exercises')
+@ApiHeader({ name: 'x-user-id', description: 'ID del usuario', required: false })
 @Controller('exercises')
 export class ExercisesController {
   constructor(
@@ -57,11 +45,13 @@ export class ExercisesController {
   ) {}
 
   @Get()
+  @ApiOperation({ summary: 'Listar ejercicios', description: 'Devuelve todos los ejercicios del usuario con filtros opcionales' })
+  @ApiResponse({ status: 200, type: [ExerciseResponseDto] })
   async list(
     @Headers('x-user-id') userIdHeader: string,
     @Query() query: ListExercisesQueryDto,
   ): Promise<ExerciseResponseDto[]> {
-    const userId = Id.fromString(userIdHeader || '00000000-0000-4000-8000-000000000000');
+    const userId = Id.fromString(userIdHeader || DEFAULT_USER_ID);
     const filters = Object.keys(query).length > 0 ? query : undefined;
     const exercises = await this.listExercises.execute(userId, filters);
     return exercises.map((e) => this.toResponseDto(e));
@@ -69,22 +59,28 @@ export class ExercisesController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Crear ejercicio' })
+  @ApiResponse({ status: 201, type: ExerciseResponseDto })
   async create(
     @Headers('x-user-id') userIdHeader: string,
     @Body() dto: CreateExerciseDto,
   ): Promise<ExerciseResponseDto> {
-    const userId = Id.fromString(userIdHeader || '00000000-0000-4000-8000-000000000000');
+    const userId = Id.fromString(userIdHeader || DEFAULT_USER_ID);
     const exercise = await this.createExercise.execute(userId, dto);
     return this.toResponseDto(exercise);
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Actualizar ejercicio' })
+  @ApiParam({ name: 'id', description: 'UUID del ejercicio' })
+  @ApiResponse({ status: 200, type: ExerciseResponseDto })
+  @ApiResponse({ status: 404, description: 'Ejercicio no encontrado' })
   async update(
     @Headers('x-user-id') userIdHeader: string,
     @Param('id') id: string,
     @Body() dto: UpdateExerciseDto,
   ): Promise<ExerciseResponseDto | null> {
-    const userId = Id.fromString(userIdHeader || '00000000-0000-4000-8000-000000000000');
+    const userId = Id.fromString(userIdHeader || DEFAULT_USER_ID);
     const exerciseId = Id.fromString(id);
     const exercise = await this.updateExercise.execute(userId, exerciseId, dto);
     return exercise ? this.toResponseDto(exercise) : null;
@@ -92,11 +88,15 @@ export class ExercisesController {
 
   @Post(':id/deactivate')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Desactivar ejercicio (soft-delete)' })
+  @ApiParam({ name: 'id', description: 'UUID del ejercicio' })
+  @ApiResponse({ status: 200, type: ExerciseResponseDto })
+  @ApiResponse({ status: 404, description: 'Ejercicio no encontrado' })
   async deactivate(
     @Headers('x-user-id') userIdHeader: string,
     @Param('id') id: string,
   ): Promise<ExerciseResponseDto | null> {
-    const userId = Id.fromString(userIdHeader || '00000000-0000-4000-8000-000000000000');
+    const userId = Id.fromString(userIdHeader || DEFAULT_USER_ID);
     const exerciseId = Id.fromString(id);
     const exercise = await this.deactivateExercise.execute(userId, exerciseId);
     return exercise ? this.toResponseDto(exercise) : null;
@@ -104,11 +104,15 @@ export class ExercisesController {
 
   @Post(':id/restore')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Restaurar ejercicio desactivado' })
+  @ApiParam({ name: 'id', description: 'UUID del ejercicio' })
+  @ApiResponse({ status: 200, type: ExerciseResponseDto })
+  @ApiResponse({ status: 404, description: 'Ejercicio no encontrado' })
   async restore(
     @Headers('x-user-id') userIdHeader: string,
     @Param('id') id: string,
   ): Promise<ExerciseResponseDto | null> {
-    const userId = Id.fromString(userIdHeader || '00000000-0000-4000-8000-000000000000');
+    const userId = Id.fromString(userIdHeader || DEFAULT_USER_ID);
     const exerciseId = Id.fromString(id);
     const exercise = await this.restoreExercise.execute(userId, exerciseId);
     return exercise ? this.toResponseDto(exercise) : null;

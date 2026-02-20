@@ -5,7 +5,7 @@ import { WorkoutSession } from '../../../domain/entities/workout-session.entity'
 import type { RoutineRepository } from '../../../domain/repositories/routine.repository';
 import type { WorkoutRepository } from '../../../domain/repositories/workout.repository';
 import { ROUTINE_REPOSITORY } from './routine-repository.token';
-import { WORKOUT_REPOSITORY } from './workout-repository.token';
+import { WORKOUT_REPOSITORY } from '../workouts/workout-repository.token';
 
 /**
  * ActivateRoutineForDateUseCase
