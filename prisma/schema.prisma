@@ -1,0 +1,292 @@
+// =============================================================================
+// PRISMA SCHEMA - Gym App
+// =============================================================================
+//
+// Este archivo define el modelo de datos para la base de datos.
+// Las tablas reflejan las entidades del dominio (domain/entities).
+//
+// CONVENCIONES:
+// - Nombres en camelCase para Prisma (convención JS/TS)
+// - Enums alineados con domain/enums
+// - Índices únicos para userId+date donde aplica (evitar duplicados)
+// - Relaciones con onDelete: Cascade donde tiene sentido (ej: borrar Routine → borrar RoutineDay)
+//
+// GENERAR CLIENTE: npx prisma generate
+// MIGRAR: npx prisma migrate dev --name init
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// ENUMS (alineados con domain/enums)
+// -----------------------------------------------------------------------------
+
+enum MuscleCategory {
+  ARM
+  SHOULDER
+  CHEST
+  LEG
+  BACK
+}
+
+enum Equipment {
+  BARBELL
+  DUMBBELL
+  CABLE
+}
+
+enum SideType {
+  UNILATERLA
+  BILATERLA
+}
+
+enum SessionStatus {
+  DRAFT
+  COMPLETED
+}
+
+enum SetType {
+  SIMPLE
+  DROPSET
+}
+
+enum OriginType {
+  FROM_ROUTINE
+  MANUAL
+}
+
+// -----------------------------------------------------------------------------
+// USER (referencia para multi-tenant; puede extenderse con auth)
+// -----------------------------------------------------------------------------
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+
+  exercises       Exercise[]
+  routines        Routine[]
+  workoutSessions WorkoutSession[]
+  runSessions    RunSession[]
+  measurements    BodyMeasurement[]
+}
+
+// -----------------------------------------------------------------------------
+// EXERCISE - Catálogo de ejercicios (domain: Exercise)
+// -----------------------------------------------------------------------------
+
+model Exercise {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  category  MuscleCategory
+  equipment Equipment
+  sideType  SideType
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  routineDayExercises RoutineDayExercise[]
+  workoutExercises   WorkoutExercise[]
+
+  @@index([userId])
+  @@index([userId, isActive, category])
+}
+
+// -----------------------------------------------------------------------------
+// ROUTINE - Plantillas de rutinas (domain: Routine)
+// -----------------------------------------------------------------------------
+
+model Routine {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  isActive  Boolean  @default(true)
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  days RoutineDay[]
+
+  @@index([userId])
+}
+
+// -----------------------------------------------------------------------------
+// ROUTINE_DAY - Días de una rutina (domain: RoutineDay)
+// -----------------------------------------------------------------------------
+
+model RoutineDay {
+  id        String  @id @default(uuid())
+  routineId String
+  dayKey    String
+  order     Int
+
+  routine   Routine             @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  exercises RoutineDayExercise[]
+
+  @@index([routineId])
+}
+
+// -----------------------------------------------------------------------------
+// ROUTINE_DAY_EXERCISE - Ejercicios planeados por día (domain: RoutineDayExercise)
+// -----------------------------------------------------------------------------
+
+model RoutineDayExercise {
+  id              String   @id @default(uuid())
+  routineDayId    String
+  exerciseId      String
+  plannedSets     Int
+  plannedSetsType SetType
+  order           Int
+  plannedDrops    Int?
+
+  routineDay RoutineDay @relation(fields: [routineDayId], references: [id], onDelete: Cascade)
+  exercise   Exercise   @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+
+  @@index([routineDayId])
+}
+
+// -----------------------------------------------------------------------------
+// WORKOUT_SESSION - Sesión de musculación por fecha (domain: WorkoutSession)
+// Constraint: un usuario solo puede tener una sesión por fecha
+// -----------------------------------------------------------------------------
+
+model WorkoutSession {
+  id                 String        @id @default(uuid())
+  userId             String
+  date               String        // YYYY-MM-DD (DateOnly)
+  status             SessionStatus @default(DRAFT)
+  injuryMode         Boolean       @default(false)
+  note               String?
+  sourceRoutineId    String?
+  sourceRoutineDayId String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercises WorkoutExercise[]
+
+  @@unique([userId, date])
+  @@index([userId])
+}
+
+// -----------------------------------------------------------------------------
+// WORKOUT_EXERCISE - Ejercicio dentro de una sesión (domain: WorkoutExercise)
+// -----------------------------------------------------------------------------
+
+model WorkoutExercise {
+  id               String   @id @default(uuid())
+  workoutSessionId String
+  exerciseId       String
+  origin           OriginType
+  order            Int
+
+  workoutSession WorkoutSession @relation(fields: [workoutSessionId], references: [id], onDelete: Cascade)
+  exercise       Exercise       @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  sets           WorkoutSet[]
+
+  @@index([workoutSessionId])
+}
+
+// -----------------------------------------------------------------------------
+// WORKOUT_SET - Set simple o dropset (domain: WorkoutSet)
+// -----------------------------------------------------------------------------
+
+model WorkoutSet {
+  id               String   @id @default(uuid())
+  workoutExerciseId String
+  type             SetType
+  order            Int
+  weightKg         Float?
+  reps             Int?
+
+  workoutExercise WorkoutExercise @relation(fields: [workoutExerciseId], references: [id], onDelete: Cascade)
+  drops           WorkoutDrop[]
+
+  @@index([workoutExerciseId])
+}
+
+// -----------------------------------------------------------------------------
+// WORKOUT_DROP - Drop de un dropset (domain: WorkoutDrop)
+// -----------------------------------------------------------------------------
+
+model WorkoutDrop {
+  id           String  @id @default(uuid())
+  workoutSetId String
+  order        Int
+  weightKg     Float
+  reps         Int
+
+  workoutSet WorkoutSet @relation(fields: [workoutSetId], references: [id], onDelete: Cascade)
+
+  @@index([workoutSetId])
+}
+
+// -----------------------------------------------------------------------------
+// RUN_SESSION - Sesión de running por fecha (domain: RunSession)
+// Constraint: un usuario solo puede tener una sesión de run por fecha
+// -----------------------------------------------------------------------------
+
+model RunSession {
+  id          String        @id @default(uuid())
+  userId      String
+  date        String        // YYYY-MM-DD
+  distanceKm  Float
+  durationSec Int
+  status      SessionStatus @default(DRAFT)
+  injuryMode  Boolean       @default(false)
+  note        String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  splits RunSplit[]
+
+  @@unique([userId, date])
+  @@index([userId])
+}
+
+// -----------------------------------------------------------------------------
+// RUN_SPLIT - Parcial de una carrera (domain: RunSplit)
+// -----------------------------------------------------------------------------
+
+model RunSplit {
+  id           String  @id @default(uuid())
+  runSessionId String
+  order        Int
+  distanceKm   Float
+  durationSec  Int
+
+  runSession RunSession @relation(fields: [runSessionId], references: [id], onDelete: Cascade)
+
+  @@index([runSessionId])
+}
+
+// -----------------------------------------------------------------------------
+// BODY_MEASUREMENT - Mediciones corporales (domain: BodyMeasurement)
+// -----------------------------------------------------------------------------
+
+model BodyMeasurement {
+  id             String   @id @default(uuid())
+  userId         String
+  date           String   // YYYY-MM-DD
+  weightKg       Float
+  deltaPctFat    Float
+  deltaPctMuscle Float
+  note           String?
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, date])
+}

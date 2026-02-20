@@ -106,6 +106,12 @@ export type CalendarDayData = {
 export interface CalendarQueryRepository {
   getDayOverview(userId: Id, date: DateOnly): Promise<CalendarDayOverview>;
   getDayData(userId: Id, date: DateOnly): Promise<CalendarDayData>;
+  /** Devuelve overview de cada día del mes (1..lastDay). */
+  getCalendarMonth(
+    userId: Id,
+    year: number,
+    month: number,
+  ): Promise<CalendarDayOverview[]>;
 }
 
 export class CalendarQueryRepositoryImpl implements CalendarQueryRepository {
@@ -165,6 +171,21 @@ export class CalendarQueryRepositoryImpl implements CalendarQueryRepository {
     }
 
     return data;
+  }
+
+  async getCalendarMonth(
+    userId: Id,
+    year: number,
+    month: number,
+  ): Promise<CalendarDayOverview[]> {
+    const lastDay = new Date(year, month, 0).getDate();
+    const results: CalendarDayOverview[] = [];
+    for (let day = 1; day <= lastDay; day++) {
+      const date = DateOnly.fromDate(new Date(year, month - 1, day));
+      const overview = await this.getDayOverview(userId, date);
+      results.push(overview);
+    }
+    return results;
   }
 
   private mapWorkoutToDayData(session: WorkoutSessionDetail): DayWorkoutData {
