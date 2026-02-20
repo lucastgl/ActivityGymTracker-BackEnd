@@ -8,11 +8,31 @@ import { Id } from '../../domain/value-objects/id.vo';
 import { DateOnly } from '../../domain/value-objects/date-only.vo';
 import { BodyMeasurement } from '../../domain/entities/body-measurement.entity';
 import type { CreateMeasurementInput } from '../../domain/repositories/measurement.repository';
-import type { BodyMeasurement as PrismaMeasurement } from '@prisma/client';
-import { Prisma } from '@prisma/client';
+
+/** Fila BodyMeasurement de Prisma */
+interface PrismaMeasurementRow {
+  id: string;
+  userId: string;
+  date: string;
+  weightKg: number;
+  deltaPctFat: number;
+  deltaPctMuscle: number;
+  createdAt: Date;
+  note: string | null;
+}
+
+/** Data para prisma.bodyMeasurement.create */
+interface PrismaMeasurementCreateData {
+  user: { connect: { id: string } };
+  date: string;
+  weightKg: number;
+  deltaPctFat: number;
+  deltaPctMuscle: number;
+  note?: string;
+}
 
 export const MeasurementMapper = {
-  toDomain(row: PrismaMeasurement): BodyMeasurement {
+  toDomain(row: PrismaMeasurementRow): BodyMeasurement {
     return new BodyMeasurement(
       Id.fromString(row.id),
       Id.fromString(row.userId),
@@ -25,7 +45,10 @@ export const MeasurementMapper = {
     );
   },
 
-  toPrismaCreate(userId: Id, input: CreateMeasurementInput): Prisma.BodyMeasurementCreateInput {
+  toPrismaCreate(
+    userId: Id,
+    input: CreateMeasurementInput,
+  ): PrismaMeasurementCreateData {
     return {
       user: { connect: { id: userId.value } },
       date: input.date.toString(),

@@ -11,17 +11,72 @@ import { WorkoutSession } from '../../domain/entities/workout-session.entity';
 import { WorkoutExercise } from '../../domain/entities/workout-exercise.entity';
 import { WorkoutSet } from '../../domain/entities/workout-set.entity';
 import { WorkoutDrop } from '../../domain/entities/workout-drop.entity';
-import type { UpsertSessionMetaInput, WorkoutSessionDetail, WorkoutExerciseWithSets, WorkoutSetWithDrops } from '../../domain/repositories/workout.repository';
-import type { WorkoutSession as PrismaSession, WorkoutExercise as PrismaWorkoutEx, WorkoutSet as PrismaSet, WorkoutDrop as PrismaDrop } from '@prisma/client';
-import { Prisma } from '@prisma/client';
+import type {
+  UpsertSessionMetaInput,
+  WorkoutSessionDetail,
+  WorkoutExerciseWithSets,
+  WorkoutSetWithDrops,
+} from '../../domain/repositories/workout.repository';
+import type { SessionStatus } from '../../domain/enums/session-status.enum';
+import type { OriginType } from '../../domain/enums/origin-type.enum';
+import type { SetType } from '../../domain/enums/set-type.enum';
+
+/** Fila WorkoutSession de Prisma */
+interface PrismaWorkoutSessionRow {
+  id: string;
+  userId: string;
+  date: string;
+  status: string;
+  injuryMode: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  note: string | null;
+  sourceRoutineId: string | null;
+  sourceRoutineDayId: string | null;
+}
+
+/** Fila WorkoutExercise de Prisma */
+interface PrismaWorkoutExerciseRow {
+  id: string;
+  workoutSessionId: string;
+  exerciseId: string;
+  origin: string;
+  order: number;
+}
+
+/** Fila WorkoutSet de Prisma */
+interface PrismaWorkoutSetRow {
+  id: string;
+  workoutExerciseId: string;
+  type: string;
+  order: number;
+  weightKg: number | null;
+  reps: number | null;
+}
+
+/** Fila WorkoutDrop de Prisma */
+interface PrismaWorkoutDropRow {
+  id: string;
+  workoutSetId: string;
+  order: number;
+  weightKg: number;
+  reps: number;
+}
+
+/** Data para prisma.workoutSession.update */
+interface PrismaWorkoutSessionUpdateData {
+  status?: SessionStatus;
+  injuryMode?: boolean;
+  note?: string;
+}
 
 export const WorkoutSessionMapper = {
-  toDomain(row: PrismaSession): WorkoutSession {
+  toDomain(row: PrismaWorkoutSessionRow): WorkoutSession {
     return new WorkoutSession(
       Id.fromString(row.id),
       Id.fromString(row.userId),
       DateOnly.fromString(row.date),
-      row.status as WorkoutSession['status'],
+      row.status as SessionStatus,
       row.injuryMode,
       row.createdAt,
       row.updatedAt,
@@ -31,8 +86,10 @@ export const WorkoutSessionMapper = {
     );
   },
 
-  toPrismaUpsertMeta(meta: UpsertSessionMetaInput): Prisma.WorkoutSessionUpdateInput {
-    const data: Prisma.WorkoutSessionUpdateInput = {};
+  toPrismaUpsertMeta(
+    meta: UpsertSessionMetaInput,
+  ): PrismaWorkoutSessionUpdateData {
+    const data: PrismaWorkoutSessionUpdateData = {};
     if (meta.status !== undefined) data.status = meta.status;
     if (meta.injuryMode !== undefined) data.injuryMode = meta.injuryMode;
     if (meta.note !== undefined) data.note = meta.note;
@@ -41,23 +98,23 @@ export const WorkoutSessionMapper = {
 };
 
 export const WorkoutExerciseMapper = {
-  toDomain(row: PrismaWorkoutEx): WorkoutExercise {
+  toDomain(row: PrismaWorkoutExerciseRow): WorkoutExercise {
     return new WorkoutExercise(
       Id.fromString(row.id),
       Id.fromString(row.workoutSessionId),
       Id.fromString(row.exerciseId),
-      row.origin as WorkoutExercise['origin'],
+      row.origin as OriginType,
       row.order,
     );
   },
 };
 
 export const WorkoutSetMapper = {
-  toDomain(row: PrismaSet): WorkoutSet {
+  toDomain(row: PrismaWorkoutSetRow): WorkoutSet {
     return new WorkoutSet(
       Id.fromString(row.id),
       Id.fromString(row.workoutExerciseId),
-      row.type as WorkoutSet['type'],
+      row.type as SetType,
       row.order,
       row.weightKg ?? undefined,
       row.reps ?? undefined,
@@ -66,7 +123,7 @@ export const WorkoutSetMapper = {
 };
 
 export const WorkoutDropMapper = {
-  toDomain(row: PrismaDrop): WorkoutDrop {
+  toDomain(row: PrismaWorkoutDropRow): WorkoutDrop {
     return new WorkoutDrop(
       Id.fromString(row.id),
       Id.fromString(row.workoutSetId),
@@ -79,8 +136,10 @@ export const WorkoutDropMapper = {
 
 /** Construye WorkoutSessionDetail desde Prisma con includes */
 export function toWorkoutSessionDetail(
-  session: PrismaSession,
-  exercises: (PrismaWorkoutEx & { sets: (PrismaSet & { drops: PrismaDrop[] })[] })[],
+  session: PrismaWorkoutSessionRow,
+  exercises: (PrismaWorkoutExerciseRow & {
+    sets: (PrismaWorkoutSetRow & { drops: PrismaWorkoutDropRow[] })[];
+  })[],
 ): WorkoutSessionDetail {
   const exVOs: WorkoutExerciseWithSets[] = exercises.map((ex) => {
     const sets: WorkoutSetWithDrops[] = ex.sets.map((s) => ({
